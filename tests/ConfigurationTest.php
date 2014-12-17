@@ -1,34 +1,45 @@
 <?php
 use Haystack\Haystack;
+use Models\Product as Product;
+use Indexes\Product as ProductIndex;
 
 class ConfigurationTest extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @var \Haystack\Engines\Engine
+     */
+    private $haystack;
+
     public function setUp()
     {
-        require_once '../indexes/ProductIndex';
-
-        $conf = [
-            'default' => [
+        $conf = array(
+            'default' => array(
                 'engine' => '\Haystack\Engines\Elasticsearch',
                 'host' => 'localhost'
-            ]
-        ];
+            )
+        );
 
         Haystack::setConfiguration($conf);
 
-        $haystack = Haystack::getEngine();
-        $index = $haystack->getIndexInstance('ProductIndex');
-
-        var_dump($index);
+        $this->haystack = Haystack::getEngine();
     }
 
     public function tearDown()
     {
-        // Remove data from store
+
     }
 
-    public function testCan()
+    public function testIndexCreation()
     {
-        $this->assertEquals(1, 1);
+        $this->haystack->createIndex('Indexes\Product');
+
+        $this->assertTrue($this->haystack->indexExists('Indexes\Product'));
+    }
+
+    public function testIndexDeletion()
+    {
+        $this->haystack->deleteIndex('Indexes\Product');
+
+        $this->assertFalse($this->haystack->indexExists('Indexes\Product'));
     }
 }

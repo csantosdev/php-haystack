@@ -11,7 +11,7 @@ class Haystack
     /**
      * @var array
      */
-    private static $instances;
+    private static $instances = array();
 
     /**
      * Map of search engine configurations.
@@ -40,13 +40,13 @@ class Haystack
      */
     public static function getEngine($name = 'default')
     {
-        if (!isset(self::$conf[$name])) {
+        if (!isset(self::$config[$name])) {
             throw new \Exception("There is no configuration '$name' set for Haystack.");
         }
 
         if (!isset(self::$instances[$name])) {
             $conf = self::$config[$name];
-            self::$instances[$conf] = new $conf['engine']($conf);
+            self::$instances[$name] = new $conf['engine']($conf);
         }
 
         return self::$instances[$name];

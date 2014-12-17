@@ -1,4 +1,6 @@
 <?php
+namespace Models;
+
 class Product
 {
     public $name = 'Xbox One';

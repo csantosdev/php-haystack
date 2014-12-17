@@ -1,5 +1,5 @@
 <?php
-namespace Haystack\Engines\Elasticsearch;
+namespace Haystack\Engines;
 
 use Haystack\Engines\Elasticsearch\Query\Query;
 use Haystack\Engines\Elasticsearch\Query\QuerySet;
@@ -13,15 +13,129 @@ class ElasticSearch extends \Haystack\Engines\Engine {
 		$params = array('hosts' => array($conf['host']));
 		$this->client = new \Elasticsearch\Client($params);
 	}
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createIndex($class, array $options = null)
+    {
+        $index = $this->getIndexInstance($class);
+
+        if(!method_exists($index, 'getTypeName')) {
+            throw new \Exception('Haystack index classes require a "getTypeName" method when using an Elasticsearch engine');
+        }
+
+        $type = $index->getTypeName();
+
+        if(!is_string($type)) {
+            throw new \Exception('Haystack index class method "getTypeName" is required to return a string.');
+        }
+
+        $params = array(
+            'index' => $index->getIndexName(),
+            'body' => array(
+                'mappings' => array(
+                    $type => array(
+                        'properties' => $this->createMapping($class)
+                    )
+                )
+            )
+        );
+
+        if(isset($index->_settings))
+            $params['body']['settings'] = $index->_settings;
+
+        $this->client->indices()->create($params);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteIndex($class, array $options = null)
+    {
+        $index = $this->getIndexInstance($class);
+
+        $this->client->indices()->delete(array(
+            'index' => $index->getIndexName()
+        ));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateIndex($name, array $options = null)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function indexExists($class)
+    {
+        $index = $this->getIndexInstance($class);
+        $params = array('index' => $index->getIndexName());
+
+        return $this->client->indices()->exists($params);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function indexDocument($index, $document)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function updateDocument($index, $document)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteDocument($index, $id)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function bulkIndexDocuments($index, array $documents)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function bulkUpdateDocuments($index, array $documents)
+    {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function bulkDeleteDocuments($index, array $document_ids)
+    {
+
+    }
 	
 	public function getClient() {
 		return $this->client;
 	}
-	
+
+    /**
 	public function createIndex($classname) {
 		$index = $this->getIndexInstance($classname);
 		$params = array('index' => $index->getIndexName());
-		
+
 		$params = array(
 			'index' => $index->getIndexName(),
 			'type' => '',
@@ -33,24 +147,30 @@ class ElasticSearch extends \Haystack\Engines\Engine {
 				)
 			)
 		);
-		
+
 		if(isset($index->_settings))
 			$params['body']['settings'] = $index->_settings;
-		
+
 		$this->client->create($params);
 	}
+     * */
 	
-	public function updateIndex($name) {
+	/*
+	 public function updateIndex($name) {
 		$this->createIndex($name);
 	}
+	*/
 	
-	public function deleteIndex($classname) {
+	/*
+
+	 public function deleteIndex($classname) {
 		$index = $this->getIndexInstance($classname);
 		$params = array(
 			'index' => $index->getIndexName(),
 		);
 		$this->client->indices()->delete($params);
 	}
+	*/
 
 	public function index($classname, $doc) {
 		$index = $this->getIndexInstance($classname);
