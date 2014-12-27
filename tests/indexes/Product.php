@@ -1,18 +1,35 @@
 <?php
 namespace Indexes;
 
-class Product
+use Haystack\Fields\FieldFactory;
+use Haystack\Fields\Field;
+
+class Product extends \Haystack\Index
 {
-    public $name = array('type' => 'string');
-    public $price = array('type' => 'string');
-    public $category = array('type' => 'string');
+    public $name = array('CharField');
+    public $price = array('FloatField');
+    public $categories = array('ArrayField', 'type' => Field::TYPE_INT);
+    public $meta = array(
+        'NestedField',
+        'fields' => array(
+            'meta_name' => array('CharField'),
+            'meta_value' => array('CharField'),
+            'meta_options' => array(
+                'NestedField',
+                'fields' => array(
+                    'tags' => array('ArrayField', 'type' => FIELD::TYPE_STRING),
+                    'value' => array('CharField')
+                )
+            )
+        )
+    );
 
     public function getIndexName()
     {
         return 'product';
     }
 
-    public function getModelName()
+    public function getModelClass()
     {
         return 'Models\Product';
     }

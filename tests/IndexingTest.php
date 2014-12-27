@@ -6,50 +6,75 @@
  */
 use Haystack\Haystack;
 
-class IndexingTest extends PHPUnit_Framework_TestCase
+class IndexingTest extends Base
 {
-
-    private $haystack;
-
-    public function setUp()
+    public static function setUpBeforeClass()
     {
-        $conf = [
-            'default' => [
-                'engine' => '\Haystack\Engines\Elasticsearch',
-                'host' => 'localhost'
-            ]
-        ];
+        parent::setUpBeforeClass();
 
-        Haystack::setConfiguration($conf);
+        if(self::$haystack->indexExists('Indexes\Product')) {
+            self::$haystack->deleteIndex('Indexes\Product');
+        }
 
-        $this->haystack = Haystack::getEngine();
+        self::$haystack->createIndex('Indexes\Product');
     }
 
-    public function tearDown()
+    public static function tearDownAfterClass()
     {
-        // Remove data from store
+        self::$haystack->deleteIndex('Indexes\Product');
     }
 
     /**
-     * Tests the creation of an index.
+     * Tests the creation of a new document.
      */
-    public function createIndexTest()
+    public function testIndexingNewDocument()
     {
-        $this->haystack->
+        $document = array(
+            'name' => 'Xbox',
+            'price' => 300.00,
+            'specs' => array(
+                'width' => 100,
+                'height' => 50
+            )
+        );
+        $success = self::$haystack->indexDocument('Indexes\Product', $document);
+        $this->assertTrue($success);
+
+        $stored_document = self::$haystack->filter('Indexes\Product', array(
+            'name' => 'Xbox',
+            'price' => 300.00
+        ));
+        $this->assertSame($document, $stored_document->toArray());
     }
 
     /**
-     * Tests the deletion of an index.
+     * Tests the updating of an existing document.
      */
-    public function deleteIndexTest()
+    public function testUpdatingDocument()
     {
+        $document = array(
+            'name' => 'Xbox',
+            'price' => 400.00,
+            'specs' => array(
+                'width' => 100,
+                'height' => 50
+            )
+        );
+        $success = self::$haystack->updateDocument('Indexes\Product', $document);
+        $this->assertTrue($success);
 
+        $stored_document = self::$haystack->filter('Indexes\Product', array(
+            'name' => 'Xbox',
+            'price' => 300.00
+        ));
+
+        $this->assertSame($document, $stored_document->toArray());
     }
 
     /**
-     * Tests updating an existing index.
+     * Tests the deletion of an existing document.
      */
-    public function updateIndexTest()
+    public function testDeleteDocument()
     {
 
     }

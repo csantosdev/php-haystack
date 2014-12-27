@@ -1,14 +1,14 @@
 <?php
 namespace Haystack\Engines;
 
-use Haystack\Engines\Elasticsearch\Query\Query;
 use Haystack\Engines\Elasticsearch\Query\QuerySet;
 
-class ElasticSearch extends \Haystack\Engines\Engine {
-	
+class ElasticSearch extends \Haystack\Engines\Engine
+{
 	private $client;
 	
 	public function __construct($conf) {
+
 		parent::__construct($conf);
 		$params = array('hosts' => array($conf['host']));
 		$this->client = new \Elasticsearch\Client($params);
@@ -22,7 +22,7 @@ class ElasticSearch extends \Haystack\Engines\Engine {
         $index = $this->getIndexInstance($class);
 
         if(!method_exists($index, 'getTypeName')) {
-            throw new \Exception('Haystack index classes require a "getTypeName" method when using an Elasticsearch engine');
+            throw new \Exception('Haystack index ' . $class . ' requires a "getTypeName" method when using an Elasticsearch engine');
         }
 
         $type = $index->getTypeName();
@@ -36,16 +36,18 @@ class ElasticSearch extends \Haystack\Engines\Engine {
             'body' => array(
                 'mappings' => array(
                     $type => array(
-                        'properties' => $this->createMapping($class)
+                        'properties' => $this->createIndexSchema($index)
                     )
                 )
             )
         );
 
-        if(isset($index->_settings))
-            $params['body']['settings'] = $index->_settings;
+        $params['body']['settings'] = $index->getDefaultConfiguration();
 
+        var_dump($params);
         $this->client->indices()->create($params);
+
+        return true;
     }
 
     /**
@@ -82,9 +84,20 @@ class ElasticSearch extends \Haystack\Engines\Engine {
     /**
      * {@inheritdoc}
      */
-    public function indexDocument($index, $document)
+    public function indexDocument($class, $document)
     {
+        $index = $this->getIndexInstance($class);
 
+        $params = array(
+            'index' => $index->getIndexName(),
+            'id' => $document->id,
+            'type' => $index->getTypeName(),
+            'body' => array(
+                'doc' => $this->getFieldAndValues($class, $document)
+            )
+        );
+
+        return $this->client->create($params);
     }
 
     /**
@@ -93,6 +106,26 @@ class ElasticSearch extends \Haystack\Engines\Engine {
     public function updateDocument($index, $document)
     {
 
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function upsertDocument($class, $document)
+    {
+        $index = $this->getIndexInstance($class);
+
+        $params = array(
+            'index' => $index->getIndexName(),
+            'id' => $document->id,
+            'type' => $index->getTypeName(),
+            'body' => array(
+                'doc' => $this->getFieldAndValues($class, $document),
+                'doc_as_upsert' => true
+            )
+        );
+
+        return $this->client->update($params);
     }
 
     /**
@@ -126,8 +159,62 @@ class ElasticSearch extends \Haystack\Engines\Engine {
     {
 
     }
-	
-	public function getClient() {
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getDefaultIndexConfiguration()
+    {
+        return array(
+            'number_of_shards' => 1,
+            'number_of_replicas' => 0,
+
+            'analysis' => array(
+
+                'filter' => array(
+                    'haystack_ngram_filter' => array(
+                        'type' => 'edgeNGram',
+                        'min_gram' => 1,
+                        'max_gram' => 5
+                    )
+                ),
+
+                'analyzer' => array(
+                    'haystack_iexact_analyzer' => array(
+                        'tokenizer' => 'keyword',
+                        'filter' => 'lowercase'
+                    ),
+                    'haystack_search_analyzer' => array(
+                        'tokenizer' => 'whitespace'
+                    ),
+                    'haystack_isearch_analyzer' => array(
+                        'tokenizer' => 'whitespace',
+                        'filter' => 'lowercase'
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getFieldClass($type)
+    {
+        $class = sprintf('Haystack\Engines\Elasticsearch\Fields\%s', $type);
+
+        if(!class_exists($class)) {
+            throw new \Exception('Field type ' . $class . ' could not be found.');
+        }
+
+        return $class;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+	public function getClient()
+    {
 		return $this->client;
 	}
 
@@ -297,4 +384,55 @@ class ElasticSearch extends \Haystack\Engines\Engine {
 		
 		return $mapping;
 	}
+
+    /**
+     * Returns an array to feed into the client library for insert and update document requests.
+     *
+     * @param string $class Index class name.
+     * @param mixed $document Object of data to be used in building
+     * @return array
+     */
+    private function buildRequest($class, $document)
+    {
+        $index = $this->getIndexInstance($class);
+
+        if(!method_exists($index, 'getTypeName')) {
+            throw new \Exception('Haystack index ' . $class . ' requires a "getTypeName" method when using an Elasticsearch engine');
+        }
+
+        $type = $index->getTypeName();
+
+        if(!is_string($type)) {
+            throw new \Exception('Haystack index class method "getTypeName" is required to return a string.');
+        }
+
+        $request = array(
+            'index' => $index->getIndexName(),
+            'id' => $document->id,
+            'type' => $type,
+            'body' => array(
+                'doc' => $this->getFieldAndValues($class, $document)
+            )
+        );
+
+        return $request;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createIndexSchema(\Haystack\Index $index)
+    {
+        $schema = array();
+        $fields = get_object_vars($index);
+
+        foreach($fields as $field_name => $field_value) {
+            $field_class = $this->getFieldClass($field_value[0]);
+            $field = new $field_class($field_name, $field_value, $this);
+            $schema[] = $field->toSchema();
+        }
+
+        var_dump($schema);
+        return $schema;
+    }
 }

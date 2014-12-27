@@ -1,45 +1,27 @@
 <?php
-use Haystack\Haystack;
-use Models\Product as Product;
-use Indexes\Product as ProductIndex;
-
-class ConfigurationTest extends PHPUnit_Framework_TestCase
+/**
+ * Tests the functionality of creating, updating and deleting indexes.
+ *
+ * @author Chris Santos <csantosdev@gmail.com>
+ */
+class ConfigurationTest extends Base
 {
-    /**
-     * @var \Haystack\Engines\Engine
-     */
-    private $haystack;
-
-    public function setUp()
-    {
-        $conf = array(
-            'default' => array(
-                'engine' => '\Haystack\Engines\Elasticsearch',
-                'host' => 'localhost'
-            )
-        );
-
-        Haystack::setConfiguration($conf);
-
-        $this->haystack = Haystack::getEngine();
-    }
-
-    public function tearDown()
-    {
-
-    }
-
     public function testIndexCreation()
     {
-        $this->haystack->createIndex('Indexes\Product');
+        self::$haystack->createIndex('Indexes\Product');
 
-        $this->assertTrue($this->haystack->indexExists('Indexes\Product'));
+        $this->assertTrue(self::$haystack->indexExists('Indexes\Product'));
+    }
+
+    public function testIndexUpdate()
+    {
+
     }
 
     public function testIndexDeletion()
     {
-        $this->haystack->deleteIndex('Indexes\Product');
+        //self::$haystack->deleteIndex('Indexes\Product');
 
-        $this->assertFalse($this->haystack->indexExists('Indexes\Product'));
+        //$this->assertFalse(self::$haystack->indexExists('Indexes\Product'));
     }
 }

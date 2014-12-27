@@ -3,6 +3,7 @@ namespace Haystack\Engines;
 /**
  * The basics to the search engine Engine class. Provides functionality to interact with managing
  * indexes and documents.
+ *
  * TODO: This class needs to be broken up into 2 classes. One for querying calls and another for managing the indexes.
  *
  * @package Haystack\Engines
@@ -80,32 +81,42 @@ abstract class Engine
     /**
      * Index a document into an existing index.
      *
-     * @params string $index Index name.
-     * @params array $document Array of data to index.
+     * @params string $class Index class name.
+     * @params mixed $document Object to index.
      * @return bool
      * @throws \Exception
      */
-    abstract public function indexDocument($index, $document);
+    abstract public function indexDocument($class, $document);
 
     /**
      * Update a document within an index.
      *
-     * @params string $index Index name.
-     * @params array $document Array of data to update the document.
+     * @params string $class Index class name.
+     * @params mixed $document Object to update the document.
      * @return bool
      * @throws \Exception
      */
-    abstract public function updateDocument($index, $document);
+    abstract public function updateDocument($class, $document);
+
+    /**
+     * Update a document within an index, if it does not exist create one.
+     *
+     * @params string $class Index class name.
+     * @params mixed $document Object to update/insert the document.
+     * @return bool
+     * @throws \Exception
+     */
+    abstract public function upsertDocument($class, $document);
 
     /**
      * Delete a document within an index.
      *
-     * @params string $index Index name.
+     * @params string $class Index class name.
      * @params string $id ID of the document to delete.
      * @return bool
      * @throws \Exception
      */
-    abstract public function deleteDocument($index, $id);
+    abstract public function deleteDocument($class, $id);
 
     /**
      * Bulk index many documents within an index.
@@ -136,6 +147,36 @@ abstract class Engine
      * @throws \Exception
      */
     abstract public function bulkDeleteDocuments($index, array $document_ids);
+
+    /**
+     * Returns an array of the default settings for the index being created.
+     *
+     * @return array
+     */
+    abstract public function getDefaultIndexConfiguration();
+
+    /**
+     * Returns the string of a field type class defined in the Haystack index.
+     *
+     * @param $type Haystack field type name.
+     * @return string
+     * @throws \Exception
+     */
+    abstract public function getFieldClass($type);
+
+    /**
+     * Returns the instance of the client library used to access the search engine.
+     *
+     * @return mixed
+     */
+    abstract public function getClient();
+
+    /**
+     * Returns the schema/mapping for the provided Index instance.
+     *
+     * @return mixed
+     */
+    abstract public function createIndexSchema(\Haystack\Index $index);
 
     public function getIndexNameByModel($name)
     {
@@ -180,7 +221,7 @@ abstract class Engine
      * Returns and instance of a Haystack index object.
      *
      * @param string $class
-     * @return object
+     * @return \Haystack\Index
      */
     public function getIndexInstance($class)
     {
@@ -188,7 +229,7 @@ abstract class Engine
             return $this->instances[$class];
         }
 
-        return $this->instances[$class] = $this->getIndexReflectionClass($class)->newInstance();
+        return $this->instances[$class] = new $class($this);
     }
 
     // NOT NEEDED?
@@ -215,14 +256,24 @@ abstract class Engine
         throw new \Exception("There was no 'model_attr' for field '$field_name' on index '$index_name'");
     }
 
+    /**
+     * TODO: RENAME THIS METHOD TO SOMETHING MORE ACCURATE
+     *
+     * Returns an array of data that will be stored into a document.
+     *
+     * @param string $index_name
+     * @param array $doc
+     * @return array
+     * @throws \Exception
+     */
     public function getFieldAndValues($index_name, $doc)
     {
-
         $data = array();
         $index = $this->getIndexInstance($index_name);
-        $reflection = $this->getIndexReflectionClass($index_name);
-        $properties = $reflection->getDefaultProperties();
-        //$base_model = &$doc[$index->getModelName()];
+        //$reflection = $this->getIndexReflectionClass($index_name);
+        //$properties = $reflection->getDefaultProperties();
+
+        $properties = get_object_vars($index);
 
         foreach ($properties as $prop => $conf) {
 
