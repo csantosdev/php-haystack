@@ -13,6 +13,11 @@ abstract class Field
     const TYPE_INT = 'int';
 
     /**
+     * Data type float.
+     */
+    const TYPE_FLOAT = 'float';
+
+    /**
      * Data type string.
      */
     const TYPE_STRING = 'string';

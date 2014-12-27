@@ -1,7 +1,6 @@
 <?php
 namespace Indexes;
 
-use Haystack\Fields\FieldFactory;
 use Haystack\Fields\Field;
 
 class Product extends \Haystack\Index

@@ -423,16 +423,35 @@ class ElasticSearch extends \Haystack\Engines\Engine
      */
     public function createIndexSchema(\Haystack\Index $index)
     {
-        $schema = array();
         $fields = get_object_vars($index);
+        $schema = $this->createFieldSchema($fields);
+        return $schema;
+    }
+
+    /**
+     * Recursively creates the schema/mapping for each Field provided. The NestedField type is what will utilize recursion.
+     *
+     * @param array $fields
+     */
+    private function createFieldSchema($fields)
+    {
+        $schema = array();
 
         foreach($fields as $field_name => $field_value) {
             $field_class = $this->getFieldClass($field_value[0]);
-            $field = new $field_class($field_name, $field_value, $this);
-            $schema[] = $field->toSchema();
+
+            if($field_class === 'Haystack\Engines\Elasticsearch\Fields\NestedField') {
+                $schema[$field_name] = array(
+                    'type' => 'nested',
+                    'properties' => $this->createFieldSchema($field_value['fields'])
+                );
+
+            } else {
+                $field = new $field_class($field_name, $field_value, $this);
+                $schema[$field_name] = $field->toSchema();
+            }
         }
 
-        var_dump($schema);
         return $schema;
     }
 }

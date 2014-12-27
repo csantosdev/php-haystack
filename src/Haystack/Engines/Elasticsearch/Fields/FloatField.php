@@ -10,9 +10,7 @@ class FloatField extends Field
      */
     public function toSchema()
     {
-        return array(
-            $this->name => array('type' => 'float', 'store' => $this->stored)
-        );
+        return array('type' => 'float', 'store' => $this->stored);
     }
 
     /**

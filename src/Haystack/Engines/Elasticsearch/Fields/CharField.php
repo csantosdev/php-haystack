@@ -10,9 +10,7 @@ class CharField extends Field
      */
     public function toSchema()
     {
-        return array(
-            $this->name => array('type' => 'string', 'store' => $this->stored)
-        );
+        return array('type' => 'string', 'store' => $this->stored, 'test' => 'ok', 'index' => $this->indexed);
     }
 
     /**

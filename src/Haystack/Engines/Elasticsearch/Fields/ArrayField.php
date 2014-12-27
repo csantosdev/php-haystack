@@ -14,7 +14,7 @@ class ArrayField extends Field
     {
         parent::__construct($field_name, $args, $engine);
 
-        $this->type = isset($args['']) ? $args[''] : 'string';
+        $this->type = isset($args['type']) ? $args['type'] : 'string';
     }
 
     /**
@@ -22,9 +22,7 @@ class ArrayField extends Field
      */
     public function toSchema()
     {
-        return array(
-            $this->name => array('type' => 'string', 'store' => $this->stored)
-        );
+        return array('type' => 'string', 'store' => $this->stored);
     }
 
     /**
@@ -32,8 +30,28 @@ class ArrayField extends Field
      */
     public function sanitize(&$input)
     {
-        if(!is_string($input)) {
-            $input = (string)$input;
+        switch($this->type) {
+
+            case Field::TYPE_INT:
+
+                if(!is_integer($input)) {
+                    $input = (int)$input;
+                }
+                break;
+
+            case Field::TYPE_FLOAT:
+
+                if(!is_float($input)) {
+                    $input = (float)$input;
+                }
+                break;
+
+            case Field::TYPE_STRING:
+
+                if(!is_string($input)) {
+                    $input = (string)$input;
+                }
+                break;
         }
     }
 }

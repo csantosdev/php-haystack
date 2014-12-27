@@ -5,7 +5,7 @@ use Haystack\Fields\Field;
 
 class NestedField extends Field
 {
-    protected $type;
+    protected $args;
 
     /**
      * {@inheritdoc}
@@ -14,13 +14,7 @@ class NestedField extends Field
     {
         parent::__construct($field_name, $args, $engine);
 
-        if(!isset($args['fields'])) {
-            throw new \Exception('The index "fields" must be provided when defining the NestedField field type.');
-        }
-
-
-
-        $this->type = isset($args['']) ? $args[''] : 'string';
+        $this->args = $args;
     }
 
     /**
@@ -28,6 +22,12 @@ class NestedField extends Field
      */
     public function toSchema()
     {
+        if(!isset($this->args['fields'])) {
+            throw new \Exception('The index "fields" must be provided when defining the NestedField field type.');
+        }
+
+        return $this->buildSchema($this->args['fields']);
+
         return array(
             $this->name => array('type' => 'string', 'store' => $this->stored)
         );
@@ -41,5 +41,23 @@ class NestedField extends Field
         if(!is_string($input)) {
             $input = (string)$input;
         }
+    }
+
+    /**
+     * Recursively builds the Elasticsearch mapping for this Nested field type.
+     *
+     * @param array $fields
+     */
+    private function buildSchema(array $fields)
+    {
+        $mapping = array();
+
+        foreach($fields as $field_name => $field_value) {
+            $field_class = $this->getFieldClass($field_value[0]);
+            $field = new $field_class($field_name, $field_value, $this->engine);
+            $schema[] = $field->toSchema();
+        }
+
+        return $mapping;
     }
 }
